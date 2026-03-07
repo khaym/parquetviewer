@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Parquet Editor</title>
+    <style>
+      /* Fallback CSS variables for browser dev mode.
+         VS Code overrides these at runtime, so they have no effect in production. */
+      :root {
+        --vscode-foreground: #cccccc;
+        --vscode-editor-background: #1e1e1e;
+        --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --vscode-font-size: 13px;
+        --vscode-focusBorder: #007fd4;
+        --vscode-widget-border: #454545;
+        --vscode-descriptionForeground: #858585;
+        --vscode-input-background: #3c3c3c;
+        --vscode-input-foreground: #cccccc;
+        --vscode-button-background: #0e639c;
+        --vscode-button-foreground: #ffffff;
+        --vscode-button-hoverBackground: #1177bb;
+        --vscode-list-hoverBackground: #2a2d2e;
+        --vscode-editorGroupHeader-tabsBackground: #252526;
+        --vscode-inputValidation-errorBackground: #5a1d1d;
+        --vscode-inputValidation-errorBorder: #be1100;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!--
+      Dev mode mock: when opened in a browser (not VS Code),
+      acquireVsCodeApi is undefined, so we provide a mock.
+      This classic script runs synchronously before module scripts.
+      In production (VS Code), acquireVsCodeApi is already defined
+      by the webview host, so this block is skipped entirely.
+    -->
+    <script>
+      if (typeof acquireVsCodeApi === "undefined") {
+        (function () {
+          // ── Sample schema ──
+          var schema = [
+            { name: "id", type: "INT32", nullable: false },
+            { name: "name", type: "UTF8", nullable: false },
+            { name: "active", type: "BOOLEAN", nullable: false },
+            { name: "score", type: "FLOAT", nullable: true },
+            { name: "big_number", type: "INT64", nullable: true },
+            { name: "created_date", type: "DATE", nullable: false },
+            { name: "updated_at", type: "TIMESTAMP_MILLIS", nullable: true },
+            { name: "notes", type: "UTF8", nullable: true },
+          ];
+
+          // ── Sample rows (30 rows) ──
+          var names = ["Alice","Bob","Charlie","Diana","Eve","Frank","Grace","Hank","Ivy","Jack"];
+          var rows = [];
+          for (var i = 0; i < 30; i++) {
+            var nullEvery5 = i % 5 === 4;
+            rows.push({
+              id: i + 1,
+              name: names[i % names.length],
+              active: i % 3 !== 0,
+              score: nullEvery5 ? null : Math.round((i * 7.3 + 1.5) * 100) / 100,
+              big_number: nullEvery5 ? null : String(i * 1000000000),
+              created_date: "2024-01-" + String((i % 28) + 1).padStart(2, "0"),
+              updated_at: nullEvery5 ? null : "2024-06-" + String((i % 28) + 1).padStart(2, "0") + "T10:" + String(i % 60).padStart(2, "0") + ":00.000Z",
+              notes: i % 7 === 0 ? null : "Note for row " + (i + 1),
+            });
+          }
+
+          var currentPageSize = 10;
+          var currentFilters = [];
+
+          function applyFilters(allRows, filters) {
+            if (!filters || filters.length === 0) return null;
+            var result = [];
+            var indices = [];
+            for (var i = 0; i < allRows.length; i++) {
+              var match = true;
+              for (var f = 0; f < filters.length; f++) {
+                var filter = filters[f];
+                var val = allRows[i][filter.column];
+                if (val === null || val === undefined) { match = false; break; }
+                var op = filter.operator;
+                if (op === "isTrue") { if (val !== true) match = false; }
+                else if (op === "isFalse") { if (val !== false) match = false; }
+                else if (op === "equals") { if (String(val) !== String(filter.value)) match = false; }
+                else if (op === "notEquals") { if (String(val) === String(filter.value)) match = false; }
+                else if (op === "contains") { if (String(val).toLowerCase().indexOf(String(filter.value).toLowerCase()) === -1) match = false; }
+                else if (op === "startsWith") { if (!String(val).toLowerCase().startsWith(String(filter.value).toLowerCase())) match = false; }
+                else if (op === "gt") { if (Number(val) <= Number(filter.value)) match = false; }
+                else if (op === "lt") { if (Number(val) >= Number(filter.value)) match = false; }
+                else if (op === "gte") { if (Number(val) < Number(filter.value)) match = false; }
+                else if (op === "lte") { if (Number(val) > Number(filter.value)) match = false; }
+                else if (op === "before") { if (new Date(val) >= new Date(filter.value)) match = false; }
+                else if (op === "after") { if (new Date(val) <= new Date(filter.value)) match = false; }
+                if (!match) break;
+              }
+              if (match) { result.push(allRows[i]); indices.push(i); }
+            }
+            return { filteredRows: result, indices: indices };
+          }
+
+          function getPage(pageIndex) {
+            var filtered = applyFilters(rows, currentFilters);
+            var source = filtered ? filtered.filteredRows : rows;
+            var start = pageIndex * currentPageSize;
+            var page = {
+              rows: source.slice(start, start + currentPageSize),
+              pageIndex: pageIndex,
+              pageSize: currentPageSize,
+              totalRows: rows.length,
+            };
+            if (filtered) {
+              page.filteredTotalRows = filtered.filteredRows.length;
+              page.rowIndices = filtered.indices.slice(start, start + currentPageSize);
+            }
+            return page;
+          }
+
+          // ── Mock acquireVsCodeApi ──
+          var state = {};
+
+          function handleMessage(msg) {
+            switch (msg.type) {
+              case "ready":
+                var page = getPage(0);
+                window.dispatchEvent(new MessageEvent("message", { data: { type: "init", schema: schema, data: page } }));
+                break;
+              case "requestPage":
+                if (msg.pageSize !== undefined) {
+                  currentPageSize = msg.pageSize;
+                }
+                var p = getPage(msg.pageIndex);
+                window.dispatchEvent(new MessageEvent("message", { data: { type: "dataPage", data: p } }));
+                break;
+              case "editCell":
+                if (rows[msg.rowIndex]) {
+                  // Simple validation: INT32 columns must receive a finite number
+                  var colDef = schema.find(function(c) { return c.name === msg.column; });
+                  var numTypes = ["INT8","INT16","INT32","UINT8","UINT16","UINT32","FLOAT","DOUBLE"];
+                  if (colDef && numTypes.indexOf(colDef.type) !== -1) {
+                    if (typeof msg.value !== "number" || !isFinite(msg.value)) {
+                      window.dispatchEvent(new MessageEvent("message", { data: {
+                        type: "validationError",
+                        rowIndex: msg.rowIndex,
+                        column: msg.column,
+                        message: "Expected a finite number for " + colDef.type,
+                      }}));
+                      break;
+                    }
+                  }
+                  rows[msg.rowIndex][msg.column] = msg.value;
+                  console.log("[dev] editCell row=" + msg.rowIndex + " col=" + msg.column, msg.value);
+                  var editPageIndex = Math.floor(msg.rowIndex / currentPageSize);
+                  var ep = getPage(editPageIndex);
+                  window.dispatchEvent(new MessageEvent("message", { data: { type: "dataPage", data: ep } }));
+                }
+                break;
+              case "setFilter":
+                currentFilters = msg.filters || [];
+                console.log("[dev] setFilter", currentFilters);
+                var fp = getPage(0);
+                window.dispatchEvent(new MessageEvent("message", { data: { type: "dataPage", data: fp } }));
+                break;
+              case "save":
+                console.log("[dev] save (no-op)");
+                window.dispatchEvent(new MessageEvent("message", { data: { type: "saveResult", success: true } }));
+                break;
+            }
+          }
+
+          window.acquireVsCodeApi = function () {
+            return {
+              postMessage: function (msg) {
+                setTimeout(function () { handleMessage(msg); }, 0);
+              },
+              getState: function () { return state; },
+              setState: function (s) { state = s; },
+            };
+          };
+
+          console.log("[dev] VS Code API mock installed");
+        })();
+      }
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

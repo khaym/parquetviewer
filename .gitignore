@@ -1,0 +1,14 @@
+node_modules/
+dist/
+webview/dist/
+webview/node_modules/
+
+*.vsix
+*.parquet
+
+test-results/
+
+.claude/
+.devcontainer/
+docs/
+CLAUDE.md

@@ -1,0 +1,67 @@
+{
+  "name": "parquet-editor",
+  "displayName": "Parquet Editor",
+  "description": "View and edit Apache Parquet files in a spreadsheet-style interface",
+  "version": "0.0.1",
+  "publisher": "parquet-editor",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "parquetEditor.editor",
+        "displayName": "Parquet Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.parquet"
+          }
+        ],
+        "priority": "default"
+      }
+    ]
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:webview": "cd webview && npx vitest run",
+    "build:ext": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node && cp node_modules/parquet-wasm/esm/parquet_wasm_bg.wasm dist/",
+    "dev:webview": "cd webview && npx vite",
+    "build:webview": "cd webview && vite build",
+    "build": "npm run build:ext && npm run build:webview",
+    "test:e2e": "cd webview && npx playwright test",
+    "lint": "tsc --noEmit",
+    "package": "npm run build && npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^20.11.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/vscode": "^1.85.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "esbuild": "^0.24.0",
+    "fast-check": "^4.5.3",
+    "jsdom": "^28.1.0",
+    "typescript": "^5.7.0",
+    "vite": "^7.3.1",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
+    "apache-arrow": "^21.1.0",
+    "parquet-wasm": "^0.7.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "zod": "^3.24.0"
+  }
+}
