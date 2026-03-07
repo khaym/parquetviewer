@@ -10,5 +10,7 @@ test-results/
 
 .claude/
 .devcontainer/
-docs/
+docs/*.md
+!docs/images/
 CLAUDE.md
+scripts/

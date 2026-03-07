@@ -5,6 +5,10 @@
   "version": "0.0.1",
   "publisher": "parquet-editor",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/khaym/parquetviewer"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },

@@ -1,27 +1,75 @@
 # Parquet Editor
 
-View and edit Apache Parquet files in VS Code with a spreadsheet-style interface.
+A VS Code extension that lets you view and edit [Apache Parquet](https://parquet.apache.org/) files directly — no external tools, no command line, just open and go.
+
+## Why?
+
+Parquet files are compact and fast, but notoriously hard to inspect. Most workflows involve converting to CSV or firing up a Python REPL. Parquet Editor brings a familiar spreadsheet experience right into your editor.
 
 ## Features
 
-- Open `.parquet` files directly in VS Code
-- Spreadsheet-style data viewing with pagination
-- Click-to-edit cells with type-aware validation
-- Column filtering (equals, contains, greater than, etc.)
-- Schema view showing column names, types, and nullability
-- Undo/Redo support (Ctrl+Z / Ctrl+Shift+Z)
-- Save changes back to Parquet format (Ctrl+S)
-- NULL vs empty string distinction
+### Spreadsheet-style data view
 
-## Usage
+Browse your data with paginated navigation, NULL highlighting, and type-aware column headers.
 
-1. Open any `.parquet` file in VS Code
-2. The file opens automatically in the Parquet Editor
-3. Click any cell to edit its value
-4. Use the filter icon in column headers to filter data
-5. Switch between Data and Schema tabs
-6. Save with Ctrl+S
+![Data View](docs/images/data-view.png)
+
+### Click-to-edit cells
+
+Modify values in place — type validation ensures data integrity.
+
+![Cell Editing](docs/images/cell-editing.png)
+
+### Column filters
+
+Excel-style filtering: equals, contains, greater/less than, and more.
+
+![Filter](docs/images/filter.png)
+
+### Schema inspector
+
+View column names, data types, and nullability at a glance.
+
+![Schema View](docs/images/schema-view.png)
+
+### And more
+
+- **Undo / Redo** — Full edit history with `Ctrl+Z` / `Ctrl+Shift+Z`
+- **Save** — Write changes back to Parquet format with `Ctrl+S`
+- **Type safety** — Supports 16 Parquet types including INT64, TIMESTAMP, BOOLEAN, and more
+
+## Getting Started
+
+1. Install the extension from the VS Code Marketplace (or `.vsix`)
+2. Open any `.parquet` file — it opens automatically in Parquet Editor
+3. Click a cell to edit, use column header filters to narrow data
+4. Switch between **Data** and **Schema** tabs
+5. Save with `Ctrl+S`
 
 ## Supported Types
 
-BOOLEAN, INT8, INT16, INT32, INT64, UINT8, UINT16, UINT32, UINT64, FLOAT, DOUBLE, UTF8, DATE, TIMESTAMP_MILLIS, TIMESTAMP_MICROS, BYTE_ARRAY
+`BOOLEAN` · `INT8` · `INT16` · `INT32` · `INT64` · `UINT8` · `UINT16` · `UINT32` · `UINT64` · `FLOAT` · `DOUBLE` · `UTF8` · `DATE` · `TIMESTAMP_MILLIS` · `TIMESTAMP_MICROS` · `BYTE_ARRAY`
+
+## Development
+
+```bash
+npm install
+npm run build        # Build extension + webview
+npm test             # Run unit & property-based tests
+npm run test:webview # Run webview component tests
+npm run test:e2e     # Run Playwright E2E tests
+npm run dev:webview  # Start webview dev server with mock data
+npm run package      # Build .vsix package
+```
+
+## Tech Stack
+
+- **Extension Host**: TypeScript + esbuild
+- **Webview**: React + Vite + TanStack Table
+- **Parquet I/O**: parquet-wasm + Apache Arrow
+- **Validation**: Zod (runtime schema generation from Parquet types)
+- **Testing**: Vitest (unit + property-based with fast-check) + Playwright (E2E)
+
+## License
+
+MIT
