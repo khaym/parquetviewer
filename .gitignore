@@ -6,6 +6,10 @@ webview/node_modules/
 *.vsix
 *.parquet
 
+.env*
+*.pem
+*.key
+
 test-results/
 
 .claude/

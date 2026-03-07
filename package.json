@@ -2,7 +2,7 @@
   "name": "parquet-editor",
   "displayName": "Parquet Editor",
   "description": "View and edit Apache Parquet files in a spreadsheet-style interface",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "khaym",
   "icon": "images/icon.png",
   "license": "MIT",
