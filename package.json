@@ -42,7 +42,8 @@
     "build": "npm run build:ext && npm run build:webview",
     "test:e2e": "cd webview && npx playwright test",
     "lint": "tsc --noEmit",
-    "package": "npm run build && npx @vscode/vsce package --no-dependencies"
+    "package": "npm run build && npx @vscode/vsce package --no-dependencies",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
