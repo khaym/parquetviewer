@@ -3,7 +3,7 @@
   "displayName": "Parquet Editor",
   "description": "View and edit Apache Parquet files in a spreadsheet-style interface",
   "version": "0.0.1",
-  "publisher": "parquet-editor",
+  "publisher": "khaym",
   "license": "MIT",
   "repository": {
     "type": "git",

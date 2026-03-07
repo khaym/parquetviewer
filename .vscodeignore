@@ -22,3 +22,4 @@ docs/**
 test-results/**
 CLAUDE.md
 *.parquet
+scripts/**
