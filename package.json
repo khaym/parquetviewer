@@ -41,7 +41,7 @@
     "build:webview": "cd webview && vite build",
     "build": "npm run build:ext && npm run build:webview",
     "test:e2e": "cd webview && npx playwright test",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit && tsc --noEmit -p webview",
     "package": "npm run build && npx @vscode/vsce package --no-dependencies",
     "prepare": "git config core.hooksPath .githooks"
   },

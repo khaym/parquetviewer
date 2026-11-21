@@ -12,7 +12,7 @@ import type { ExtensionToWebviewMessage } from "@shared/types";
 describe("dev/setup", () => {
   beforeEach(() => {
     vi.resetModules();
-    delete (window as Record<string, unknown>).acquireVsCodeApi;
+    delete (window as unknown as Record<string, unknown>).acquireVsCodeApi;
   });
 
   async function loadSetup() {
