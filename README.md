@@ -62,6 +62,16 @@ npm run dev:webview  # Start webview dev server with mock data
 npm run package      # Build .vsix package
 ```
 
+### Pre-commit hook
+
+A pre-commit hook in `.githooks/pre-commit` checks staged files for secrets, verifies that your git email is a noreply address, and checks `.gitignore` coverage. `npm install` activates it via the `prepare` script. If you skip `npm install`, run this once after cloning:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+If a finding is a known-safe fixture, silence it with a `oss-checker:allow` comment on the same line, or `oss-checker:allow-next-line` on the line above.
+
 ## Tech Stack
 
 - **Extension Host**: TypeScript + esbuild
