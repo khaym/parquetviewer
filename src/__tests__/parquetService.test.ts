@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
+import * as arrow from "apache-arrow";
 import { ParquetService, initParquetWasm } from "../parquetService";
 import type { ParquetSchema, ParquetRow } from "../../shared/types";
 
@@ -148,6 +149,68 @@ describe("ParquetService", () => {
       expect(result2.rows[0].name).toBe("Alicia");
       expect(result2.rows[1].name).toBeNull();
       expect(result2.rows[2].name).toBe("Charlie");
+    });
+  });
+
+  // ── Type preservation across read/write (requires WASM) ─────
+
+  describe("type preservation", () => {
+    const typedSchema: ParquetSchema = [
+      { name: "active", type: "BOOLEAN", nullable: true },
+      { name: "created_ms", type: "TIMESTAMP_MILLIS", nullable: true },
+      { name: "created_us", type: "TIMESTAMP_MICROS", nullable: true },
+    ];
+    const typedRows: ParquetRow[] = [
+      { active: true, created_ms: "2024-01-02T03:04:05.678Z", created_us: "2024-01-02T03:04:05.678Z" },
+      { active: false, created_ms: null, created_us: null },
+      { active: null, created_ms: "1999-12-31T23:59:59.000Z", created_us: "1999-12-31T23:59:59.000Z" },
+    ];
+
+    async function readArrowTypes(buffer: Uint8Array): Promise<Record<string, arrow.DataType>> {
+      const pw = await initParquetWasm();
+      const table = arrow.tableFromIPC(pw.readParquet(buffer).intoIPCStream());
+      return Object.fromEntries(table.schema.fields.map((f) => [f.name, f.type]));
+    }
+
+    it("reads a BOOLEAN column as BOOLEAN", async () => {
+      const buffer = await service.writeFile(typedSchema, typedRows);
+      const result = await service.readFile(buffer);
+      expect(result.schema.find((c) => c.name === "active")?.type).toBe("BOOLEAN");
+    });
+
+    it("reads BOOLEAN values as booleans, not strings", async () => {
+      const buffer = await service.writeFile(typedSchema, typedRows);
+      const result = await service.readFile(buffer);
+      expect(result.rows.map((r) => r.active)).toEqual([true, false, null]);
+    });
+
+    it("reads a microsecond timestamp column as TIMESTAMP_MICROS", async () => {
+      const buffer = await service.writeFile(typedSchema, typedRows);
+      const result = await service.readFile(buffer);
+      expect(result.schema.find((c) => c.name === "created_ms")?.type).toBe("TIMESTAMP_MILLIS");
+      expect(result.schema.find((c) => c.name === "created_us")?.type).toBe("TIMESTAMP_MICROS");
+    });
+
+    it("keeps Arrow column types unchanged after read → write", async () => {
+      const original = await service.writeFile(typedSchema, typedRows);
+      const read = await service.readFile(original);
+      const rewritten = await service.writeFile(read.schema, read.rows);
+
+      const types = await readArrowTypes(rewritten);
+      expect(types.active.typeId).toBe(arrow.Type.Bool);
+      expect(types.created_ms.typeId).toBe(arrow.Type.Timestamp);
+      expect((types.created_ms as arrow.Timestamp).unit).toBe(arrow.TimeUnit.MILLISECOND);
+      expect(types.created_us.typeId).toBe(arrow.Type.Timestamp);
+      expect((types.created_us as arrow.Timestamp).unit).toBe(arrow.TimeUnit.MICROSECOND);
+    });
+
+    it("preserves values after read → write → read", async () => {
+      const original = await service.writeFile(typedSchema, typedRows);
+      const read = await service.readFile(original);
+      const rewritten = await service.writeFile(read.schema, read.rows);
+      const reread = await service.readFile(rewritten);
+
+      expect(reread.rows).toEqual(typedRows);
     });
   });
 });

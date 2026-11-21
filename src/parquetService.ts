@@ -313,14 +313,13 @@ function arrowTypeToParquetType(type: arrow.DataType): ParquetColumnSchema["type
     return "DOUBLE";
   }
 
-  const typeId = type.typeId;
-  switch (typeId) {
-    case 2: return "BOOLEAN";            // Type.Bool
-    case 6: return "UTF8";               // Type.Utf8
-    case 8: return "DATE";               // Type.Date
-    case 10: return "TIMESTAMP_MILLIS";  // Type.Timestamp
-    default: return "UTF8";
+  if (arrow.DataType.isBool(type)) return "BOOLEAN";
+  if (arrow.DataType.isUtf8(type)) return "UTF8";
+  if (arrow.DataType.isDate(type)) return "DATE";
+  if (arrow.DataType.isTimestamp(type)) {
+    return type.unit === arrow.TimeUnit.MICROSECOND ? "TIMESTAMP_MICROS" : "TIMESTAMP_MILLIS";
   }
+  return "UTF8";
 }
 
 
