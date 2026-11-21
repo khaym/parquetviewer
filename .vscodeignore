@@ -4,8 +4,8 @@ shared/**
 webview/src/**
 webview/e2e/**
 webview/index.html
-webview/vite.config.ts
-webview/vitest.config.ts
+webview/vite.config.mts
+webview/vitest.config.mts
 webview/tsconfig.json
 webview/playwright.config.ts
 **/__tests__/**
@@ -14,7 +14,7 @@ webview/playwright.config.ts
 **/*.test.tsx
 **/*.spec.ts
 tsconfig.json
-vitest.config.ts
+vitest.config.mts
 .claude/**
 docs/**
 .gitignore
