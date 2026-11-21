@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 import { DataTable } from "../components/DataTable";
@@ -116,6 +116,60 @@ describe("DataTable", () => {
     const resizeHandles = container.querySelectorAll(".resize-handle");
     // One resize handle per column
     expect(resizeHandles).toHaveLength(schema.length);
+  });
+
+  describe("column resizing", () => {
+    const getHeader = (container: HTMLElement, index: number) =>
+      container.querySelectorAll<HTMLTableCellElement>("thead th")[index];
+    const getHandle = (container: HTMLElement, index: number) =>
+      getHeader(container, index).querySelector<HTMLElement>(".resize-handle")!;
+
+    it("uses the default column width of 150px", () => {
+      const { container } = render(<DataTable {...defaultProps} />);
+      expect(getHeader(container, 0).style.width).toBe("150px");
+      expect(container.querySelector("table")!.style.width).toBe(
+        `${150 * schema.length}px`,
+      );
+    });
+
+    it("widens the column, its cells and the table while dragging the handle", () => {
+      const { container } = render(<DataTable {...defaultProps} />);
+      fireEvent.mouseDown(getHandle(container, 0), { clientX: 0 });
+      fireEvent.mouseMove(document, { clientX: 100 });
+
+      expect(getHeader(container, 0).style.width).toBe("250px");
+      expect(getHeader(container, 1).style.width).toBe("150px");
+      const firstCell = container.querySelector<HTMLElement>("tbody tr td")!;
+      expect(firstCell.style.width).toBe("250px");
+      expect(container.querySelector("table")!.style.width).toBe(
+        `${150 * schema.length + 100}px`,
+      );
+
+      fireEvent.mouseUp(document, { clientX: 100 });
+      expect(getHeader(container, 0).style.width).toBe("250px");
+    });
+
+    it("marks the handle as resizing only during the drag", () => {
+      const { container } = render(<DataTable {...defaultProps} />);
+      const handle = getHandle(container, 0);
+      expect(handle).not.toHaveClass("resizing");
+
+      fireEvent.mouseDown(handle, { clientX: 0 });
+      fireEvent.mouseMove(document, { clientX: 10 });
+      expect(getHandle(container, 0)).toHaveClass("resizing");
+
+      fireEvent.mouseUp(document, { clientX: 10 });
+      expect(getHandle(container, 0)).not.toHaveClass("resizing");
+    });
+
+    it("does not shrink a column below its 80px minimum width", () => {
+      const { container } = render(<DataTable {...defaultProps} />);
+      fireEvent.mouseDown(getHandle(container, 0), { clientX: 200 });
+      fireEvent.mouseMove(document, { clientX: 0 });
+      fireEvent.mouseUp(document, { clientX: 0 });
+
+      expect(getHeader(container, 0).style.width).toBe("80px");
+    });
   });
 
   it("renders filter icon buttons for each column", () => {

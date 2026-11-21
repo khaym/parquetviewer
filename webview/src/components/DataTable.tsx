@@ -1,13 +1,19 @@
 import {
-  useReactTable,
-  getCoreRowModel,
-  flexRender,
+  useTable,
+  tableFeatures,
+  columnSizingFeature,
+  columnResizingFeature,
   type ColumnDef,
 } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import type { ParquetSchema, ParquetRow, ColumnFilter, FilterOperator } from "@shared/types";
 import { EditableCell } from "./EditableCell";
 import { FilterDropdown } from "./FilterDropdown";
+
+const features = tableFeatures({
+  columnSizingFeature,
+  columnResizingFeature,
+});
 
 interface DataTableProps {
   schema: ParquetSchema;
@@ -55,7 +61,7 @@ export function DataTable({
     setOpenFilter(null);
   };
 
-  const columns = useMemo<ColumnDef<ParquetRow>[]>(
+  const columns = useMemo<ColumnDef<typeof features, ParquetRow>[]>(
     () =>
       schema.map((col) => ({
         id: col.name,
@@ -88,10 +94,10 @@ export function DataTable({
     [schema, pageIndex, pageSize, onEditCell, validationErrors, rowIndices],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: rows,
     columns,
-    getCoreRowModel: getCoreRowModel(),
     columnResizeMode: "onChange",
   });
 
@@ -113,10 +119,7 @@ export function DataTable({
                   >
                     <div className="header-content">
                       <div className="header-text">
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                        <table.FlexRender header={header} />
                       </div>
                       <button
                         className={`filter-icon ${hasActiveFilter ? "filter-active" : ""}`}
@@ -154,12 +157,12 @@ export function DataTable({
         <tbody>
           {table.getRowModel().rows.map((row) => (
             <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => (
+              {row.getAllCells().map((cell) => (
                 <td
                   key={cell.id}
                   style={{ width: cell.column.getSize() }}
                 >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  <table.FlexRender cell={cell} />
                 </td>
               ))}
             </tr>
