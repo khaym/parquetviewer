@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod";
 import type { ParquetColumnSchema, ParquetPrimitiveType } from "./types";
 
 /**
@@ -7,9 +7,19 @@ import type { ParquetColumnSchema, ParquetPrimitiveType } from "./types";
 const INTEGER_STRING_REGEX = /^-?\d+$/;
 
 /**
+ * Number schema for FLOAT/DOUBLE columns.
+ * Zod 4's `z.number()` rejects Infinity, but Parquet floating-point columns can store
+ * ±Infinity, so we accept any number except NaN.
+ */
+const floatingPointSchema = z.custom<number>(
+  (val) => typeof val === "number" && !Number.isNaN(val),
+  { error: "Expected a number" },
+);
+
+/**
  * Creates a base (non-nullable) Zod schema for a given Parquet primitive type.
  */
-function baseSchemaForType(type: ParquetPrimitiveType): z.ZodTypeAny {
+function baseSchemaForType(type: ParquetPrimitiveType): z.ZodType {
   switch (type) {
     // Boolean
     case "BOOLEAN":
@@ -24,7 +34,7 @@ function baseSchemaForType(type: ParquetPrimitiveType): z.ZodTypeAny {
       return z.number().int().min(-2147483648).max(2147483647);
     case "INT64":
       // INT64 exceeds JS safe integer range; accept string representation
-      return z.string().regex(INTEGER_STRING_REGEX, "Expected an integer string");
+      return z.string().regex(INTEGER_STRING_REGEX, { error: "Expected an integer string" });
 
     // Unsigned integers
     case "UINT8":
@@ -37,7 +47,7 @@ function baseSchemaForType(type: ParquetPrimitiveType): z.ZodTypeAny {
       // UINT64 exceeds JS safe integer range; accept string representation
       return z
         .string()
-        .regex(INTEGER_STRING_REGEX, "Expected an unsigned integer string")
+        .regex(INTEGER_STRING_REGEX, { error: "Expected an unsigned integer string" })
         .refine(
           (val) => {
             try {
@@ -46,13 +56,13 @@ function baseSchemaForType(type: ParquetPrimitiveType): z.ZodTypeAny {
               return false;
             }
           },
-          { message: "Expected a non-negative integer string" },
+          { error: "Expected a non-negative integer string" },
         );
 
     // Floating point
     case "FLOAT":
     case "DOUBLE":
-      return z.number();
+      return floatingPointSchema;
 
     // String / binary
     case "UTF8":
@@ -61,11 +71,11 @@ function baseSchemaForType(type: ParquetPrimitiveType): z.ZodTypeAny {
 
     // Date / timestamp — uses Zod built-in validators for calendar-aware checks
     case "DATE":
-      return z.string().date("Expected a valid date (YYYY-MM-DD)");
+      return z.iso.date({ error: "Expected a valid date (YYYY-MM-DD)" });
     case "TIMESTAMP_MILLIS":
     case "TIMESTAMP_MICROS":
-      return z.string().datetime({
-        message: "Expected a valid ISO 8601 datetime (e.g. 2024-01-15T10:30:00Z)",
+      return z.iso.datetime({
+        error: "Expected a valid ISO 8601 datetime (e.g. 2024-01-15T10:30:00Z)",
       });
 
     default: {
@@ -79,7 +89,7 @@ function baseSchemaForType(type: ParquetPrimitiveType): z.ZodTypeAny {
  * Creates a Zod validator for a single Parquet column.
  * Handles nullable columns by wrapping the base schema with `.nullable()`.
  */
-export function createColumnValidator(column: ParquetColumnSchema): z.ZodTypeAny {
+export function createColumnValidator(column: ParquetColumnSchema): z.ZodType {
   const base = baseSchemaForType(column.type);
   return column.nullable ? base.nullable() : base;
 }

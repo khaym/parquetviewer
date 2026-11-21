@@ -470,4 +470,32 @@ describe("validateCellValue", () => {
     const result = validateCellValue(col, null);
     expect(result.success).toBe(true);
   });
+
+  describe("FLOAT/DOUBLE error messages", () => {
+    const floatTypes: ParquetColumnSchema["type"][] = ["FLOAT", "DOUBLE"];
+
+    it.each([
+      ["NaN", NaN],
+      ["non-numeric string", "abc"],
+      ["null on non-nullable column", null],
+    ])("reports an 'Expected a number' message for %s", (_label, value) => {
+      for (const type of floatTypes) {
+        const col: ParquetColumnSchema = { name: "v", type, nullable: false };
+        const result = validateCellValue(col, value);
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error).toBe("Expected a number");
+        }
+      }
+    });
+
+    it("accepts Infinity and null on nullable FLOAT/DOUBLE columns", () => {
+      for (const type of floatTypes) {
+        const col: ParquetColumnSchema = { name: "v", type, nullable: true };
+        expect(validateCellValue(col, Infinity).success).toBe(true);
+        expect(validateCellValue(col, -Infinity).success).toBe(true);
+        expect(validateCellValue(col, null).success).toBe(true);
+      }
+    });
+  });
 });
